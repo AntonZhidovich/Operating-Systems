@@ -9,6 +9,12 @@ struct employee{
 	double hours;
 	};
 
+int compare(const void* p1, const void* p2){
+	employee* e1 = (employee*)p1;
+	employee* e2 = (employee*)p2;
+	return e1->num - e2->num;
+	}
+
 int main(int argc, char** argv){
 	char* binName = argv[1];
 	char* reportName = argv[2];
@@ -19,6 +25,8 @@ int main(int argc, char** argv){
 	in.seekg(0, ios::beg);
 	employee* emps = new employee[n];
 	in.read((char*)emps, n*sizeof(employee));
+
+	qsort(emps, n, sizeof(employee), compare);
 
 	ofstream out(reportName);
 	out << binName << endl;	

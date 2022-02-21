@@ -1,6 +1,7 @@
 data.bin
 Номер сотрудника    имя сотрудника      часы      зарплата
-1                   Ignat               8         200       
-2                   Ivan                10        250       
-3                   Lesha               12        300       
-4                   Denis               6         150       
+1                   Ivan                10        200       
+2                   Ignat               12        240       
+3                   Danny               4         80        
+4                   Lesha               6         120       
+5                   Sanya               12        240       
