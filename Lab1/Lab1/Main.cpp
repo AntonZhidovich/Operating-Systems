@@ -4,7 +4,14 @@
 #include <iomanip>
 #include <string>
 #include <windows.h>
-using namespace std;
+
+using std::cin;
+using std::cout;
+using std::endl;
+using std::ios;
+using std::string;
+using std::left;
+using std::ifstream;
 
 struct employee{
 	int num;

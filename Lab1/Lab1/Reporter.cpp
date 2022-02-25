@@ -1,7 +1,14 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-using namespace std;
+#include <conio.h>
+using std::cin;
+using std::cout;
+using std::endl;
+using std::ifstream;
+using std::ofstream;
+using std::ios;
+using std::left;
 
 struct employee{
 	int num;
@@ -19,22 +26,28 @@ int main(int argc, char** argv){
 	char* binName = argv[1];
 	char* reportName = argv[2];
 	int salary = atoi(argv[3]);
+	int n;
+	employee* emps;
 	ifstream in(binName, ios::in|ios::binary|ios::ate);
+	if(!in.is_open()) {
+		std::cerr << "File is not open." << std::endl;
+		return 0;
+		}
 	in.seekg(0, ios::end);
-	int n = in.tellg()/sizeof(employee);
+	n = in.tellg()/sizeof(employee);
 	in.seekg(0, ios::beg);
-	employee* emps = new employee[n];
+	emps = new employee[n];
 	in.read((char*)emps, n*sizeof(employee));
 
 	qsort(emps, n, sizeof(employee), compare);
-
+	try{
 	ofstream out(reportName);
 	out << binName << endl;	
 	out << left;
-	out  << std::setw(20) << "Номер сотрудника " 
-		<< std::setw(20) << "имя сотрудника " 
-		<< std::setw(10) <<  "часы " 
-		 << "зарплата\n";
+	out  << std::setw(20) << "Number " 
+		<< std::setw(20) << "Name " 
+		<< std::setw(10) <<  "Hours " 
+		 << "Salary\n";
 	for(int i = 0; i < n; i++){
 		out << std::setw(20) << emps[i].num  
 			<< std::setw(20) << emps[i].name
@@ -42,4 +55,10 @@ int main(int argc, char** argv){
 			<< std::setw(10) << emps[i].hours*salary << endl;
 		}
 	out.close();
+		}
+	catch(std::exception e){
+		std::cerr << e.what() << std::endl;
+		getch();
+		return 0;
+		}
 	}
