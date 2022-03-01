@@ -35,6 +35,20 @@ UINT WINAPI min_max(void* p){
     return 0;
 }
 
+UINT WINAPI average(void* p){
+    Args* args = static_cast<Args*>(p);
+    int n = args->size;
+    int* arr = args->arr;
+    int sum = 0;
+    for(int i = 0; i < n; i++){
+        sum += arr[i];
+        Sleep(12);
+    }
+    args->avg = sum/n;
+    printf("Average value: %d \n", args->avg);
+    return 0;
+}
+
 void printArr(int* arr, int n){
     for(int i = 0; i < n; i++)
         printf("%d ", arr[i]);
@@ -62,6 +76,18 @@ int main() {
         return GetLastError();
     }
 
+    HANDLE havg;
+    havg = (HANDLE)
+            _beginthreadex(NULL, 0, average, args, 0, NULL);
+    if(havg == NULL){
+        return GetLastError();
+    }
+
     WaitForSingleObject(hmin_max, INFINITE);
+    WaitForSingleObject(havg, INFINITE);
+
+    arr[args->minInd] = arr[args->maxInd] = args->avg;
+    cout << "\nChanged array: " << endl;
+    printArr(arr, n);
     return 0;
 }
