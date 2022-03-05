@@ -4,6 +4,34 @@
 #include <boost/random.hpp>
 #include <boost/chrono.hpp>
 
+struct Args {
+	int* arr;
+	int size;
+	int maxInd;
+	int minInd;
+	int avg;
+};
+
+void min_max(Args* args) {
+	int n = args->size;
+	int* arr = args->arr;
+	int maxInd, minInd;
+	maxInd = minInd = 0;
+	for (int i = 1; i < n; i++) {
+		if (arr[maxInd] < arr[i]) {
+			maxInd = i;
+		}
+		if (arr[minInd] > arr[i]) {
+			minInd = i;
+		}
+		boost::this_thread::sleep_for(boost::chrono::milliseconds(7));
+	}
+	args->maxInd = maxInd;
+	args->minInd = minInd;
+	std::cout << "Max element: " << arr[maxInd] << std::endl;
+	std::cout << "Min element: " << arr[minInd] << std::endl;
+}
+
 void printArr(int* arr, int n) {
 	for (int i = 0; i < n; i++)
 		printf("%d ", arr[i]);
@@ -23,10 +51,17 @@ int main() {
 	for (int i = 0; i < n; i++) {
 		arr[i] = dice();
 	}
-
 	printf("Generated array of %d elements: \n", n);
 	printArr(arr, n);
 	printf("\n\n");
+
+	//Init args 
+	Args* args = new Args();
+	args->size = n;
+	args->arr = arr;
+
+	boost::thread min_maxThread(min_max, args);
+	min_maxThread.join();
 	_getch();
 	return 0;
 }
