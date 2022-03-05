@@ -38,7 +38,7 @@ void average(Args* args) {
 	int sum = 0;
 	for (int i = 0; i < n; i++) {
 		sum += arr[i];
-		boost::this_thread::sleep_for(boost::chrono::milliseconds(7));
+		boost::this_thread::sleep_for(boost::chrono::milliseconds(12));
 	}
 	args->avg = sum / n;
 	printf("Average value: %d \n", args->avg);
