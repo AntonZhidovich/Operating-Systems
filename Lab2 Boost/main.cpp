@@ -32,6 +32,18 @@ void min_max(Args* args) {
 	std::cout << "Min element: " << arr[minInd] << std::endl;
 }
 
+void average(Args* args) {
+	int n = args->size;
+	int* arr = args->arr;
+	int sum = 0;
+	for (int i = 0; i < n; i++) {
+		sum += arr[i];
+		boost::this_thread::sleep_for(boost::chrono::milliseconds(7));
+	}
+	args->avg = sum / n;
+	printf("Average value: %d \n", args->avg);
+}
+
 void printArr(int* arr, int n) {
 	for (int i = 0; i < n; i++)
 		printf("%d ", arr[i]);
@@ -60,8 +72,15 @@ int main() {
 	args->size = n;
 	args->arr = arr;
 
+	//create threads
 	boost::thread min_maxThread(min_max, args);
+	boost::thread averageThread(average, args);
 	min_maxThread.join();
+	averageThread.join();
+
+	arr[args->minInd] = arr[args->maxInd] = args->avg;
+	std::cout << "\nChanged array: " << std::endl;
+	printArr(arr, n);
 	_getch();
 	return 0;
 }
