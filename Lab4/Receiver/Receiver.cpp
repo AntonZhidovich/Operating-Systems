@@ -16,7 +16,6 @@ int CreateSenders(int sendersCount, char filename[80]){
 		printf("Creation event failed.");
 		return GetLastError();
 		}
-
 		//creating process
 		char args[50] = "Sender.exe ";
 		strcat(args, filename);
@@ -31,11 +30,34 @@ int CreateSenders(int sendersCount, char filename[80]){
 		printf("Creating process error.\n");
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
-	}
-
-
+		}
 	}
 	printf("Receiver process created %d senders.\n", sendersCount);
+}
+
+char* receiveMessage(char* filename){
+	std::fstream in(filename, std::ios::binary | std::ios::in);
+	if(!in.is_open()){
+		return "Opening file failed.\n";
+	}
+
+	if(in.peek() == std::ifstream::traits_type::eof())
+		return "Message file is empty.";
+	//reading a message
+	char res[20];
+	in.read(res, 20);
+	//rewrite other messages
+	in.seekg(0, std::ios::end);
+	int n = in.tellg();
+	in.seekg(0, std::ios::beg);
+	char *temp = new char[n];
+	in.read(temp, n);
+	in.close();
+	in.open(filename, std::ios::binary | std::ios::out);
+	in.clear();	
+	in.write(temp + 20, n - 20);
+	in.close();
+	return res;
 }
 
 int main() {
@@ -52,8 +74,21 @@ int main() {
 	WaitForMultipleObjects(senderCount, readyEvents, TRUE, INFINITE);
 	std::cout << "All senders are ready. Starting." << std::endl;
 
+	HANDLE fileMutex = CreateMutex(NULL, FALSE, "FILE_ACCESS");
+	if(fileMutex == NULL){
+		printf("Creation mutex failed.");
+		return GetLastError();
+	}
 	//starting processes
 	SetEvent(startALL);
-	system("pause");
+	char tmp[20];
+	char message[20];
+	while(!std::cin.eof()){
+		std::cout << ">";
+		std::cin >> tmp;
+		WaitForSingleObject(fileMutex, INFINITE);
+		printf("%s\n", receiveMessage(filename));
+		ReleaseMutex(fileMutex);
+	}
 	delete[] readyEvents;
 }
