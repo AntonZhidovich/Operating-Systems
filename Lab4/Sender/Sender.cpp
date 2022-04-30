@@ -28,9 +28,7 @@ int main(int argc, char** argv) {
 	}
 	SetEvent(ReadyEvent);
 	printf("Ready.\n");
-	WaitForSingleObject(StartAll, INFINITE);
 	printf("Started.\n");
-
 	HANDLE fileMutex = OpenMutex(SYNCHRONIZE, FALSE, "FILE_ACCESS");
 	if(fileMutex == NULL){
 		printf("Opening mutex failed.");
@@ -38,6 +36,13 @@ int main(int argc, char** argv) {
 		return GetLastError();
 	}
 
+	//objects to handle the count of written/read messages
+	HANDLE senderSemaphore = OpenSemaphore(SEMAPHORE_MODIFY_STATE, FALSE, "MESSAGES_COUNT_SEM");
+	HANDLE mesReadEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, "MESSAGE_READ");
+	if (senderSemaphore == NULL || mesReadEvent == NULL)
+		return GetLastError(); 
+	//request processing
+	WaitForSingleObject(StartAll, INFINITE);
 	printf("Enter message or enter CTRL+Z to exit.\n");
 	char message[20];
 	while(true){
@@ -45,10 +50,18 @@ int main(int argc, char** argv) {
 		std::cin.getline(message, 20, '\n');
 		if(std::cin.eof())
 			break;
+		//sending a message
 		WaitForSingleObject(fileMutex, INFINITE);
 		sendMessage(out, message, filename);
 		ReleaseMutex(fileMutex);
+		//if message file is full, waits for reciever event
+		if(ReleaseSemaphore(senderSemaphore, 1, NULL) != TRUE){
+			std::cout << "Message file is full. Waiting for receiver." << std::endl;
+			ResetEvent(mesReadEvent);
+			WaitForSingleObject(mesReadEvent, INFINITE);
+			ReleaseSemaphore(senderSemaphore, 1, NULL);
+		}
+		std::cout << "Message has been sent." << std::endl;
 	}
-
 	return 0;
 }

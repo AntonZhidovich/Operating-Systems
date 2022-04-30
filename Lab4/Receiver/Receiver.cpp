@@ -2,6 +2,7 @@
 #include <fstream>
 #include<conio.h>
 #include <Windows.h>
+
 HANDLE *readyEvents;
 
 int CreateSenders(int sendersCount, char filename[80]){
@@ -70,25 +71,36 @@ int main() {
 	in.close();
 
 	HANDLE startALL = CreateEvent(NULL, TRUE, FALSE, "START_ALL");
+	HANDLE fileMutex = CreateMutex(NULL, FALSE, "FILE_ACCESS");
+	if(fileMutex == NULL){
+		printf("Mutex creation failed.");
+		return GetLastError();
+	}
+	//objects to control the count of written/read messages
+	HANDLE senderSemaphore = CreateSemaphore(NULL, 0, senderCount, "MESSAGES_COUNT_SEM");
+	HANDLE mesReadEvent = CreateEvent(NULL, FALSE, FALSE, "MESSAGE_READ");
+	if (senderSemaphore == NULL || mesReadEvent == NULL)
+		return GetLastError(); 
+
+	//starting processing
 	CreateSenders(senderCount, filename);
 	WaitForMultipleObjects(senderCount, readyEvents, TRUE, INFINITE);
 	std::cout << "All senders are ready. Starting." << std::endl;
-
-	HANDLE fileMutex = CreateMutex(NULL, FALSE, "FILE_ACCESS");
-	if(fileMutex == NULL){
-		printf("Creation mutex failed.");
-		return GetLastError();
-	}
-	//starting processes
 	SetEvent(startALL);
 	char tmp[20];
 	char message[20];
-	while(!std::cin.eof()){
+	while(true){
 		std::cout << ">";
 		std::cin >> tmp;
+		if(std::cin.eof())
+			break;
+		//if messages not found, it waits
+		std::cout << "Waiting for a message." << std::endl;
+		WaitForSingleObject(senderSemaphore, INFINITE);
 		WaitForSingleObject(fileMutex, INFINITE);
 		printf("%s\n", receiveMessage(filename));
 		ReleaseMutex(fileMutex);
+		SetEvent(mesReadEvent);
 	}
 	delete[] readyEvents;
 }
