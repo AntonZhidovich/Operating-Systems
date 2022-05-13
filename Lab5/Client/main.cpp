@@ -6,20 +6,23 @@
 const char pipeName[30] = "\\\\.\\pipe\\pipe_name";
 
 void messaging(HANDLE hPipe){
-    char command[10];
     std::cout << "\n\nTo quit press Ctrl+Z" << std::endl;
     while(true){
+        char command[10];
         std::cout << "Enter read/write command and ID of employee: \n>";
+        if(std::cin.eof()) {
+            return;
+        }
         std::cin.getline(command, 10, '\n');
         DWORD bytesWritten;
         bool isSent = WriteFile(hPipe, command, 10,
                                 &bytesWritten, NULL);
-        if(std::cin.eof())
-            break;
         if(!isSent){
             std::cerr << "Message cannot be sent" << std::endl;
+            getch();
             return;
         }
+        std::cout << "The message is sent." << std::endl;
     }
 }
 

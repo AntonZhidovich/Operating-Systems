@@ -2,6 +2,7 @@
 #include <conio.h>
 #include <fstream>
 #include <time.h>
+#include <process.h>
 #include <windows.h>
 #include "employee.h"
 
@@ -36,18 +37,19 @@ void startPocesses(int count){
         }
     }
 }
-
-void messaging(HANDLE hPipe){
-    char command[10];
+int c = 0;
+DWORD WINAPI messaging(LPVOID p){
+    HANDLE hPipe = (HANDLE)p;
     while(true){
         DWORD readBytes;
+        char command[10];
         bool isRead = ReadFile(hPipe, command, 10, &readBytes, NULL);
         if(strlen(command) > 0) {
             std::cout << command << std::endl;
         }
         if(!isRead){
             if(GetLastError() == ERROR_BROKEN_PIPE){
-                std::cout << "Client has disconnected." << std::endl;
+                std::cout << "Client disconnected." << std::endl;
                 break;
             }
             else {
@@ -56,10 +58,14 @@ void messaging(HANDLE hPipe){
             }
         }
     }
+    FlushFileBuffers(hPipe);
+    DisconnectNamedPipe(hPipe);
+    CloseHandle(hPipe);
 }
 
 void openPipes(int clientCount){
     HANDLE hPipe;
+    HANDLE* hThreads = new HANDLE[clientCount];
     for(int i = 0; i < clientCount; i++){
         hPipe = CreateNamedPipe(pipeName, PIPE_ACCESS_DUPLEX,
                                        PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT | PIPE_WAIT,
@@ -73,10 +79,13 @@ void openPipes(int clientCount){
             std::cout << "No connected clients." << std::endl;
             break;
         }
-        messaging(hPipe);
+        hThreads[i] = CreateThread(NULL,0,messaging,
+                (LPVOID)hPipe,0,NULL);
     }
     std::cout << "Clients connected to pipe." << std::endl;
-    CloseHandle(hPipe);
+    WaitForMultipleObjects(clientCount, hThreads, TRUE, INFINITE);
+    std::cout << "All clients are disconnected" << std::endl;
+    delete[] hThreads;
 }
 
 
@@ -106,6 +115,7 @@ int main() {
 
     //creating pipes
     openPipes(clientCount);
+    std::cout << "Press any key to exit" << std::endl;
     getch();
     delete[] hReadyEvents;
     delete[] emps;
