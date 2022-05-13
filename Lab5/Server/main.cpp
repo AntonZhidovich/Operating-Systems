@@ -37,6 +37,27 @@ void startPocesses(int count){
     }
 }
 
+void messaging(HANDLE hPipe){
+    char command[10];
+    while(true){
+        DWORD readBytes;
+        bool isRead = ReadFile(hPipe, command, 10, &readBytes, NULL);
+        if(strlen(command) > 0) {
+            std::cout << command << std::endl;
+        }
+        if(!isRead){
+            if(GetLastError() == ERROR_BROKEN_PIPE){
+                std::cout << "Client has disconnected." << std::endl;
+                break;
+            }
+            else {
+                std::cerr << "Error in reading a message." << std::endl;
+                break;
+            }
+        }
+    }
+}
+
 void openPipes(int clientCount){
     HANDLE hPipe;
     for(int i = 0; i < clientCount; i++){
@@ -52,6 +73,7 @@ void openPipes(int clientCount){
             std::cout << "No connected clients." << std::endl;
             break;
         }
+        messaging(hPipe);
     }
     std::cout << "Clients connected to pipe." << std::endl;
     CloseHandle(hPipe);
