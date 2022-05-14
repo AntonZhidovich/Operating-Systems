@@ -4,7 +4,7 @@
 #include <Windows.h>
 
 HANDLE *readyEvents;
-
+const int MESSAGE_SIZE = 20;
 int CreateSenders(int sendersCount, char filename[80]){
 	readyEvents = new HANDLE[sendersCount];
 	char buff[10];
@@ -13,7 +13,7 @@ int CreateSenders(int sendersCount, char filename[80]){
 		char eventName[30] = "sender";
 		strcat(eventName, itoa(i, buff, 10));
 		readyEvents[i] = CreateEvent(NULL, TRUE, FALSE, eventName);
-		if (readyEvents[i] == NULL) {
+		if (NULL == readyEvents[i]) {
 		printf("Creation event failed.");
 		return GetLastError();
 		}
@@ -45,8 +45,8 @@ char* receiveMessage(char* filename){
 	if(in.peek() == std::ifstream::traits_type::eof())
 		return "Message file is empty.";
 	//reading a message
-	char res[20];
-	in.read(res, 20);
+	char res[MESSAGE_SIZE];
+	in.read(res, MESSAGE_SIZE);
 	//rewrite other messages
 	in.seekg(0, std::ios::end);
 	int n = in.tellg();
@@ -56,8 +56,9 @@ char* receiveMessage(char* filename){
 	in.close();
 	in.open(filename, std::ios::binary | std::ios::out);
 	in.clear();	
-	in.write(temp + 20, n - 20);
+	in.write(temp + MESSAGE_SIZE, n - MESSAGE_SIZE);
 	in.close();
+	delete[] temp;
 	return res;
 }
 
@@ -72,14 +73,14 @@ int main() {
 
 	HANDLE startALL = CreateEvent(NULL, TRUE, FALSE, "START_ALL");
 	HANDLE fileMutex = CreateMutex(NULL, FALSE, "FILE_ACCESS");
-	if(fileMutex == NULL){
+	if(NULL == fileMutex){
 		printf("Mutex creation failed.");
 		return GetLastError();
 	}
-	//objects to control the count of written/read messages
+	//objects to handle the count of written/read messages
 	HANDLE senderSemaphore = CreateSemaphore(NULL, 0, senderCount, "MESSAGES_COUNT_SEM");
 	HANDLE mesReadEvent = CreateEvent(NULL, FALSE, FALSE, "MESSAGE_READ");
-	if (senderSemaphore == NULL || mesReadEvent == NULL)
+	if (NULL == senderSemaphore|| NULL == mesReadEvent)
 		return GetLastError(); 
 
 	//starting processing
@@ -87,8 +88,8 @@ int main() {
 	WaitForMultipleObjects(senderCount, readyEvents, TRUE, INFINITE);
 	std::cout << "All senders are ready. Starting." << std::endl;
 	SetEvent(startALL);
-	char tmp[20];
-	char message[20];
+	char tmp[MESSAGE_SIZE];
+	char message[MESSAGE_SIZE];
 	while(true){
 		std::cout << ">";
 		std::cin >> tmp;

@@ -2,9 +2,11 @@
 #include<Windows.h>
 #include <fstream>
 
+const int MESSAGE_SIZE = 20;
+
 void sendMessage(std::ofstream &out, char message[20], char* filename){
 	out.open(filename, std::ios::binary | std::ios::app);
-	out.write(message, 20);
+	out.write(message, MESSAGE_SIZE);
 	out.close();
 }
 
@@ -30,24 +32,24 @@ int main(int argc, char** argv) {
 	printf("Ready.\n");
 	printf("Started.\n");
 	HANDLE fileMutex = OpenMutex(SYNCHRONIZE, FALSE, "FILE_ACCESS");
-	if(fileMutex == NULL){
+	if(NULL == fileMutex){
 		printf("Opening mutex failed.");
 		system("pause");
 		return GetLastError();
 	}
 
-	//objects to handle the count of written/read messages
+	//objects to control the count of written/read messages
 	HANDLE senderSemaphore = OpenSemaphore(SEMAPHORE_MODIFY_STATE, FALSE, "MESSAGES_COUNT_SEM");
 	HANDLE mesReadEvent = OpenEvent(EVENT_ALL_ACCESS, FALSE, "MESSAGE_READ");
-	if (senderSemaphore == NULL || mesReadEvent == NULL)
+	if (NULL == senderSemaphore || NULL == mesReadEvent)
 		return GetLastError(); 
 	//request processing
 	WaitForSingleObject(StartAll, INFINITE);
 	printf("Enter message or enter CTRL+Z to exit.\n");
-	char message[20];
+	char message[MESSAGE_SIZE];
 	while(true){
 		std::cout << ">";
-		std::cin.getline(message, 20, '\n');
+		std::cin.getline(message, MESSAGE_SIZE, '\n');
 		if(std::cin.eof())
 			break;
 		//sending a message

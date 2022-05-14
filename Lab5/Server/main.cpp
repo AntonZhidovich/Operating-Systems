@@ -87,7 +87,9 @@ DWORD WINAPI messaging(LPVOID p){
             message[0] = ' ';
             int id = atoi(message);
             DWORD bytesWritten;
+            EnterCriticalSection(&empsCS);
             employee* empToSend = findEmp(id);
+            LeaveCriticalSection(&empsCS);
             if(NULL == empToSend){
                 empToSend = errorEmp;
             }
@@ -119,7 +121,7 @@ DWORD WINAPI messaging(LPVOID p){
             if('w' == command && empToSend != errorEmp){
                 isRead = ReadFile(hPipe, empToSend, sizeof(employee), &readBytes, NULL);
                 if(isRead){
-                    std::cout << "Employee record changed";
+                    std::cout << "Employee record changed." << std::endl;
                     empIsModifying[empToSend - emps] = false;
                     EnterCriticalSection(&empsCS);
                     sortEmps();
@@ -136,6 +138,7 @@ DWORD WINAPI messaging(LPVOID p){
     DisconnectNamedPipe(hPipe);
     CloseHandle(hPipe);
     delete errorEmp;
+    return 0;
 }
 
 void openPipes(int clientCount){
@@ -158,7 +161,7 @@ void openPipes(int clientCount){
     }
     std::cout << "Clients connected to pipe." << std::endl;
     WaitForMultipleObjects(clientCount, hThreads, TRUE, INFINITE);
-    std::cout << "All clients are disconnected" << std::endl;
+    std::cout << "All clients are disconnected." << std::endl;
     delete[] hThreads;
 }
 
