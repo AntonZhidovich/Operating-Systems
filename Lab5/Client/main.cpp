@@ -9,11 +9,11 @@ void messaging(HANDLE hPipe){
     std::cout << "\n\nTo quit press Ctrl+Z" << std::endl;
     while(true){
         char command[10];
-        std::cout << "Enter read/write command and ID of employee: \n>";
+        std::cout << "Enter r/w (to read/write) command and ID of employee: \n>";
+        std::cin.getline(command, 10, '\n');
         if(std::cin.eof()) {
             return;
         }
-        std::cin.getline(command, 10, '\n');
         DWORD bytesWritten;
         bool isSent = WriteFile(hPipe, command, 10,
                                 &bytesWritten, NULL);
@@ -22,7 +22,20 @@ void messaging(HANDLE hPipe){
             getch();
             return;
         }
-        std::cout << "The message is sent." << std::endl;
+        //receiving the answer
+        employee emp;
+        DWORD readBytes;
+        bool isRead = ReadFile(hPipe, &emp,
+                               sizeof(emp), &readBytes, NULL);
+        if(!isRead){
+            std::cerr << "Error in receiving answer" << std::endl;
+        }
+        else{
+            if(emp.num < 0)
+                std::cout << "Employee not found" << std::endl;
+            else
+                emp.print(std::cout);
+        }
     }
 }
 
@@ -43,10 +56,10 @@ int main(int argc, char** argv) {
     HANDLE hPipe;
     while(true) {
         hPipe = CreateFile(
-                pipeName, GENERIC_WRITE, FILE_SHARE_READ, NULL,
+                pipeName, GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ, NULL,
                 OPEN_EXISTING, 0, NULL);
         //if valid, stop trying to connect
-        if (hPipe != INVALID_HANDLE_VALUE) {
+        if (INVALID_HANDLE_VALUE != hPipe) {
             break;
         }
         if(!WaitNamedPipe(pipeName, 5000)){

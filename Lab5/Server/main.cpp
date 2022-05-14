@@ -2,17 +2,40 @@
 #include <conio.h>
 #include <fstream>
 #include <time.h>
+#include <algorithm>
 #include <process.h>
 #include <windows.h>
 #include "employee.h"
 
+int empCount;
+employee* emps;
 HANDLE* hReadyEvents;
 const char pipeName[30] = "\\\\.\\pipe\\pipe_name";
 
-void writeData(char filename[50], employee* emps, int n){
+void sortEmps(){
+    qsort(emps, empCount, sizeof(employee), empCmp);
+}
+
+void writeData(char filename[50]){
     std::fstream fin(filename, std::ios::binary | std::ios::out);
-    fin.write(reinterpret_cast<char*>(emps), sizeof(employee)*n);
+    fin.write(reinterpret_cast<char*>(emps), sizeof(employee) * empCount);
     fin.close();
+}
+
+void readDatastd(){
+    emps = new employee[empCount];
+    std::cout << "Enter ID, name and working hours of each employee:" << std::endl;
+    for(int i = 1; i <= empCount; ++i){
+        std::cout << "#" << i << ">";
+        std::cin >> emps[i-1].num >> emps[i-1].name >> emps[i-1].hours;
+    }
+}
+
+employee* findEmp(int id){
+    employee key;
+    key.num = id;
+    return (employee*)bsearch((const char*)(&key), (const char*)(emps), empCount,
+            sizeof(employee), empCmp);
 }
 
 void startPocesses(int count){
@@ -37,18 +60,19 @@ void startPocesses(int count){
         }
     }
 }
-int c = 0;
+
 DWORD WINAPI messaging(LPVOID p){
     HANDLE hPipe = (HANDLE)p;
+    //getting id -1 means for client that error occurred
+    employee* errorEmp = new employee;
+    errorEmp->num = -1;
     while(true){
         DWORD readBytes;
-        char command[10];
-        bool isRead = ReadFile(hPipe, command, 10, &readBytes, NULL);
-        if(strlen(command) > 0) {
-            std::cout << command << std::endl;
-        }
+        char message[10];
+        //receiving message
+        bool isRead = ReadFile(hPipe, message, 10, &readBytes, NULL);
         if(!isRead){
-            if(GetLastError() == ERROR_BROKEN_PIPE){
+            if(ERROR_BROKEN_PIPE == GetLastError()){
                 std::cout << "Client disconnected." << std::endl;
                 break;
             }
@@ -57,10 +81,31 @@ DWORD WINAPI messaging(LPVOID p){
                 break;
             }
         }
+        //sending answer
+        if(strlen(message) > 0) {
+            char command = message[0];
+            message[0] = ' '; //to parse
+            int id = atoi(message);
+            DWORD bytesWritten;
+            sortEmps();
+            employee* empToSend = findEmp(id);
+            if(NULL == empToSend){
+                empToSend = new employee;
+                empToSend->num = -1;
+                empToSend = errorEmp;
+            }
+            bool isSent = WriteFile(hPipe, empToSend, sizeof(employee),
+                                    &bytesWritten, NULL);
+            if(isSent)
+                std::cout << "Answer is sent." << std::endl;
+            else
+                std::cout << "Error in sending answer." << std::endl;
+        }
     }
     FlushFileBuffers(hPipe);
     DisconnectNamedPipe(hPipe);
     CloseHandle(hPipe);
+    delete errorEmp;
 }
 
 void openPipes(int clientCount){
@@ -68,8 +113,8 @@ void openPipes(int clientCount){
     HANDLE* hThreads = new HANDLE[clientCount];
     for(int i = 0; i < clientCount; i++){
         hPipe = CreateNamedPipe(pipeName, PIPE_ACCESS_DUPLEX,
-                                       PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT | PIPE_WAIT,
-                                       PIPE_UNLIMITED_INSTANCES, 0, 0, INFINITE, NULL);
+                                       PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+                                       PIPE_UNLIMITED_INSTANCES,0, 0,INFINITE, NULL);
         if (INVALID_HANDLE_VALUE == hPipe){
             std::cerr << "Create named pipe failed." << std::endl;
             getch();
@@ -88,21 +133,13 @@ void openPipes(int clientCount){
     delete[] hThreads;
 }
 
-
 int main() {
     //data input
     char filename[50];
-    int emplCount;
     std::cout << "Enter the file name and the count of employees. \n>";
-    std::cin >> filename >> emplCount;
-    employee* emps = new employee[emplCount];
-    std::cout << "Enter ID, name and working hours of each employee:" << std::endl;
-    for(int i = 1; i <= emplCount; ++i){
-        std::cout << "#" << i << ">";
-        std::cin >> emps[i-1].num >> emps[i-1].name >> emps[i-1].hours;
-    }
-    writeData(filename, emps, emplCount);
-
+    std::cin >> filename >> empCount;
+    readDatastd();
+    writeData(filename);
     //creating processes
     srand(time(0));
     int clientCount = 2 + rand() % 3; //from 2 to 4
@@ -112,7 +149,6 @@ int main() {
     WaitForMultipleObjects(clientCount, hReadyEvents, TRUE, INFINITE);
     std::cout << "All processes are ready.Starting." << std::endl;
     SetEvent(hstartALL);
-
     //creating pipes
     openPipes(clientCount);
     std::cout << "Press any key to exit" << std::endl;
@@ -121,5 +157,3 @@ int main() {
     delete[] emps;
     return 0;
 }
-
-
