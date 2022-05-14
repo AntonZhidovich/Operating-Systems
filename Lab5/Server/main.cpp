@@ -10,6 +10,8 @@
 int empCount;
 employee* emps;
 HANDLE* hReadyEvents;
+CRITICAL_SECTION empsCS;
+bool *empIsModifying;
 const char pipeName[30] = "\\\\.\\pipe\\pipe_name";
 
 void sortEmps(){
@@ -22,7 +24,7 @@ void writeData(char filename[50]){
     fin.close();
 }
 
-void readDatastd(){
+void readDataSTD(){
     emps = new employee[empCount];
     std::cout << "Enter ID, name and working hours of each employee:" << std::endl;
     for(int i = 1; i <= empCount; ++i){
@@ -34,8 +36,7 @@ void readDatastd(){
 employee* findEmp(int id){
     employee key;
     key.num = id;
-    return (employee*)bsearch((const char*)(&key), (const char*)(emps), empCount,
-            sizeof(employee), empCmp);
+    return (employee*)bsearch((const char*)(&key), (const char*)(emps), empCount, sizeof(employee), empCmp);
 }
 
 void startPocesses(int count){
@@ -51,8 +52,7 @@ void startPocesses(int count){
         ZeroMemory(&si, sizeof(STARTUPINFO));
         si.cb = sizeof(STARTUPINFO);
         hReadyEvents[i] = CreateEvent(NULL, TRUE, FALSE, eventName);
-        if (!CreateProcess(NULL, cmdargs, NULL, NULL, FALSE,
-                           CREATE_NEW_CONSOLE,
+        if (!CreateProcess(NULL, cmdargs, NULL, NULL, FALSE, CREATE_NEW_CONSOLE,
                            NULL, NULL, &si, &pi)) {
             printf("Creation process error.\n");
             CloseHandle(pi.hProcess);
@@ -63,13 +63,13 @@ void startPocesses(int count){
 
 DWORD WINAPI messaging(LPVOID p){
     HANDLE hPipe = (HANDLE)p;
-    //getting id -1 means for client that error occurred
+    //getting emp with id -1 means for client that error occurred
     employee* errorEmp = new employee;
     errorEmp->num = -1;
     while(true){
         DWORD readBytes;
         char message[10];
-        //receiving message
+        //receiving a message
         bool isRead = ReadFile(hPipe, message, 10, &readBytes, NULL);
         if(!isRead){
             if(ERROR_BROKEN_PIPE == GetLastError()){
@@ -84,22 +84,52 @@ DWORD WINAPI messaging(LPVOID p){
         //sending answer
         if(strlen(message) > 0) {
             char command = message[0];
-            message[0] = ' '; //to parse
+            message[0] = ' ';
             int id = atoi(message);
             DWORD bytesWritten;
-            sortEmps();
             employee* empToSend = findEmp(id);
             if(NULL == empToSend){
-                empToSend = new employee;
-                empToSend->num = -1;
                 empToSend = errorEmp;
             }
-            bool isSent = WriteFile(hPipe, empToSend, sizeof(employee),
-                                    &bytesWritten, NULL);
+            else{
+                int ind = empToSend -  emps;
+                if(empIsModifying[ind])
+                    empToSend = errorEmp;
+                else{
+                    switch (command) {
+                        case 'w':
+                            printf("Requested to modify ID %d.", id);
+                            empIsModifying[ind] = true;
+                            break;
+                        case 'r':
+                            printf("Requested to read ID %d.", id);
+                            break;
+                        default:
+                            std::cout << "Unknown request. ";
+                            empToSend = errorEmp;
+                    }
+                }
+            }
+            bool isSent = WriteFile(hPipe, empToSend, sizeof(employee), &bytesWritten, NULL);
             if(isSent)
                 std::cout << "Answer is sent." << std::endl;
             else
                 std::cout << "Error in sending answer." << std::endl;
+            //receiving a changed record
+            if('w' == command && empToSend != errorEmp){
+                isRead = ReadFile(hPipe, empToSend, sizeof(employee), &readBytes, NULL);
+                if(isRead){
+                    std::cout << "Employee record changed";
+                    empIsModifying[empToSend - emps] = false;
+                    EnterCriticalSection(&empsCS);
+                    sortEmps();
+                    LeaveCriticalSection(&empsCS);
+                }
+                else{
+                    std::cerr << "Error in reading a message." << std::endl;
+                    break;
+                }
+            }
         }
     }
     FlushFileBuffers(hPipe);
@@ -124,8 +154,7 @@ void openPipes(int clientCount){
             std::cout << "No connected clients." << std::endl;
             break;
         }
-        hThreads[i] = CreateThread(NULL,0,messaging,
-                (LPVOID)hPipe,0,NULL);
+        hThreads[i] = CreateThread(NULL, 0, messaging, (LPVOID)hPipe,0,NULL);
     }
     std::cout << "Clients connected to pipe." << std::endl;
     WaitForMultipleObjects(clientCount, hThreads, TRUE, INFINITE);
@@ -138,21 +167,32 @@ int main() {
     char filename[50];
     std::cout << "Enter the file name and the count of employees. \n>";
     std::cin >> filename >> empCount;
-    readDatastd();
+    readDataSTD();
     writeData(filename);
+    sortEmps();
+
     //creating processes
+    InitializeCriticalSection(&empsCS);
     srand(time(0));
     int clientCount = 2 + rand() % 3; //from 2 to 4
     HANDLE hstartALL = CreateEvent(NULL, TRUE, FALSE, "START_ALL");
+    empIsModifying = new bool[empCount];
+    for(int i = 0; i < empCount; ++i)
+        empIsModifying[i] = false;
     hReadyEvents = new HANDLE[clientCount];
     startPocesses(clientCount);
     WaitForMultipleObjects(clientCount, hReadyEvents, TRUE, INFINITE);
     std::cout << "All processes are ready.Starting." << std::endl;
     SetEvent(hstartALL);
+
     //creating pipes
     openPipes(clientCount);
+    for(int i = 0; i < empCount; i++)
+        emps[i].print(std::cout);
     std::cout << "Press any key to exit" << std::endl;
     getch();
+    DeleteCriticalSection(&empsCS);
+    delete[] empIsModifying;
     delete[] hReadyEvents;
     delete[] emps;
     return 0;
