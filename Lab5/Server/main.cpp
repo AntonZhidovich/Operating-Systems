@@ -1,6 +1,7 @@
 #include <iostream>
 #include <conio.h>
 #include <fstream>
+#include <string>
 #include <time.h>
 #include <algorithm>
 #include <process.h>
@@ -13,13 +14,14 @@ HANDLE* hReadyEvents;
 CRITICAL_SECTION empsCS;
 bool *empIsModifying;
 const char pipeName[30] = "\\\\.\\pipe\\pipe_name";
+const int MESSAGE_SIZE = 10;
 
 void sortEmps(){
     qsort(emps, empCount, sizeof(employee), empCmp);
 }
 
-void writeData(char filename[50]){
-    std::fstream fin(filename, std::ios::binary | std::ios::out);
+void writeData(const std::string& fileName){
+    std::fstream fin(fileName.c_str(), std::ios::binary | std::ios::out);
     fin.write(reinterpret_cast<char*>(emps), sizeof(employee) * empCount);
     fin.close();
 }
@@ -36,7 +38,8 @@ void readDataSTD(){
 employee* findEmp(int id){
     employee key;
     key.num = id;
-    return (employee*)bsearch((const char*)(&key), (const char*)(emps), empCount, sizeof(employee), empCmp);
+    return reinterpret_cast<employee*>(bsearch(reinterpret_cast<const char*>(&key), reinterpret_cast<const char*>(emps),
+                              empCount, sizeof(employee), empCmp));
 }
 
 void startPocesses(int count){
@@ -44,7 +47,7 @@ void startPocesses(int count){
     for(int i = 0; i < count; i++) {
         char cmdargs[80] = "..\\..\\Client\\cmake-build-debug\\Client.exe ";
         char eventName[50] = "READY_EVENT_";
-        itoa(i + 1, buff, 10);
+        itoa(i + 1, buff, MESSAGE_SIZE);
         strcat(eventName, buff);
         strcat(cmdargs, eventName);
         STARTUPINFO si;
@@ -68,9 +71,9 @@ DWORD WINAPI messaging(LPVOID p){
     errorEmp->num = -1;
     while(true){
         DWORD readBytes;
-        char message[10];
+        char message[MESSAGE_SIZE];
         //receiving a message
-        bool isRead = ReadFile(hPipe, message, 10, &readBytes, NULL);
+        bool isRead = ReadFile(hPipe, message, MESSAGE_SIZE, &readBytes, NULL);
         if(!isRead){
             if(ERROR_BROKEN_PIPE == GetLastError()){
                 std::cout << "Client disconnected." << std::endl;
@@ -157,7 +160,7 @@ void openPipes(int clientCount){
             std::cout << "No connected clients." << std::endl;
             break;
         }
-        hThreads[i] = CreateThread(NULL, 0, messaging, (LPVOID)hPipe,0,NULL);
+        hThreads[i] = CreateThread(NULL, 0, messaging, static_cast<LPVOID>(hPipe),0,NULL);
     }
     std::cout << "Clients connected to pipe." << std::endl;
     WaitForMultipleObjects(clientCount, hThreads, TRUE, INFINITE);

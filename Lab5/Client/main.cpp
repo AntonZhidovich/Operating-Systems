@@ -4,19 +4,19 @@
 #include "employee.h"
 
 const char pipeName[30] = "\\\\.\\pipe\\pipe_name";
-
+const int MESSAGE_SIZE = 10;
 
 void messaging(HANDLE hPipe){
     std::cout << "\n\nTo quit press Ctrl+Z" << std::endl;
     while(true){
-        char command[10];
+        char command[MESSAGE_SIZE];
         std::cout << "Enter r/w (to read/write) command and ID of employee: \n>";
-        std::cin.getline(command, 10, '\n');
+        std::cin.getline(command, MESSAGE_SIZE, '\n');
         if(std::cin.eof()) {
             return;
         }
         DWORD bytesWritten;
-        bool isSent = WriteFile(hPipe, command, 10, &bytesWritten, NULL);
+        bool isSent = WriteFile(hPipe, command, MESSAGE_SIZE, &bytesWritten, NULL);
         if(!isSent){
             std::cerr << "Message cannot be sent" << std::endl;
             getch();
