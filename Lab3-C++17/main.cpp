@@ -6,6 +6,8 @@
 #include <mutex>
 #include <chrono>
 
+const int SLEEP_TIME = 5;
+
 std::condition_variable startCV;
 std::mutex startMutex;
 bool ready;
@@ -48,11 +50,11 @@ void marker(threadArgs* args){
         std::unique_lock<std::mutex> lk(markerMutex);
         int i = rand() % args->n;
         if (args->arr[i] == 0) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME));
             args->arr[i] = args->num;
             ++count;
             lk.unlock();
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_TIME));
         } else{
             printf("Thread #%d. Marked %d elems. Unable to mark a[%d].\n", args->num, count, i);
             lk.unlock();
@@ -136,5 +138,11 @@ int main(){
         }
     }
     printf("All threads are terminated.\n");
+    for(auto a: argsVec){
+        delete a;
+    }
+    delete[] threadsPaused;
+    delete[] terminated;
+    delete[] arr;
     return 0;
 }

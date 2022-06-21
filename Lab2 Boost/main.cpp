@@ -4,6 +4,9 @@
 #include <boost/random.hpp>
 #include <boost/chrono.hpp>
 
+const int SLEEP_TIME1 = 7;
+const int SLEEP_TIME2 = 12;
+
 struct Args {
 	int* arr;
 	int size;
@@ -24,7 +27,7 @@ void min_max(Args* args) {
 		if (arr[minInd] > arr[i]) {
 			minInd = i;
 		}
-		boost::this_thread::sleep_for(boost::chrono::milliseconds(7));
+		boost::this_thread::sleep_for(boost::chrono::milliseconds(SLEEP_TIME1));
 	}
 	args->maxInd = maxInd;
 	args->minInd = minInd;
@@ -38,7 +41,7 @@ void average(Args* args) {
 	int sum = 0;
 	for (int i = 0; i < n; i++) {
 		sum += arr[i];
-		boost::this_thread::sleep_for(boost::chrono::milliseconds(12));
+		boost::this_thread::sleep_for(boost::chrono::milliseconds(SLEEP_TIME2));
 	}
 	args->avg = sum / n;
 	printf("Average value: %d \n", args->avg);
@@ -82,5 +85,7 @@ int main() {
 	std::cout << "\nChanged array: " << std::endl;
 	printArr(arr, n);
 	_getch();
+	delete args;
+	delete[] arr;
 	return 0;
 }

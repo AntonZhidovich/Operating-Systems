@@ -4,7 +4,7 @@
 #include <windows.h>
 #include <process.h>
 using std::cin;
-
+const int SLEEP_TIME = 5;
 CRITICAL_SECTION cs;
 HANDLE startThreadsEvent;
 std::vector<HANDLE> threadEvents;
@@ -40,18 +40,18 @@ UINT WINAPI marker(void *p){
     while(true){
         EnterCriticalSection(&cs);
         int i = rand() % args->n;
-        if(args->arr[i] == 0){
-            Sleep(5);
+        if(0 == args->arr[i]){
+            Sleep(SLEEP_TIME);
             args->arr[i] = args->num;
             ++count;
             LeaveCriticalSection(&cs);
-            Sleep(5);
+            Sleep(SLEEP_TIME);
         } else {
             printf("Thread #%d. Marked %d elems. Unable to mark a[%d].\n", args->num, count, i);
             LeaveCriticalSection(&cs);
             SetEvent(threadEvents[args->num-1]);
             int action = WaitForMultipleObjects(2,args->actions, FALSE, INFINITE) - WAIT_OBJECT_0;
-            if(action == 1){
+            if(1 == action){
                 for(int i = 0; i < args->n; i++){
                     if(args->arr[i] == args->num){
                         args->arr[i] = 0;
@@ -62,6 +62,7 @@ UINT WINAPI marker(void *p){
             }
         }
     }
+    delete args;
     return NULL;
 }
 
@@ -125,6 +126,7 @@ int main() {
         }
     }
     DeleteCriticalSection(&cs);
+    delete[] terminated;
     delete[] arr;
     return 0;
 }

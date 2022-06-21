@@ -4,8 +4,10 @@
 #include <Windows.h>
 
 HANDLE *readyEvents;
+const int FILENAME_SIZE = 80;
 const int MESSAGE_SIZE = 20;
-int CreateSenders(int sendersCount, char filename[80]){
+const int ARGS_CHAR_SIZE = 50;
+int CreateSenders(int sendersCount, char filename[FILENAME_SIZE]){
 	readyEvents = new HANDLE[sendersCount];
 	char buff[10];
 	for(int i = 0; i < sendersCount; i++){
@@ -18,7 +20,7 @@ int CreateSenders(int sendersCount, char filename[80]){
 		return GetLastError();
 		}
 		//creating process
-		char args[50] = "Sender.exe ";
+		char args[ARGS_CHAR_SIZE] = "Sender.exe ";
 		strcat(args, filename);
 		strcat(args, " ");
 		strcat(args, eventName);
@@ -41,7 +43,6 @@ char* receiveMessage(char* filename){
 	if(!in.is_open()){
 		return "Opening file failed.\n";
 	}
-
 	if(in.peek() == std::ifstream::traits_type::eof())
 		return "Message file is empty.";
 	//reading a message
@@ -63,7 +64,7 @@ char* receiveMessage(char* filename){
 }
 
 int main() {
-	char filename[80];
+	char filename[FILENAME_SIZE];
 	printf("Enter the file name and the number of entries.\n>");
 	int senderCount;
 	std::cin >> filename >> senderCount;

@@ -13,13 +13,16 @@ using std::string;
 using std::left;
 using std::ifstream;
 
+const int FILENAME_SIZE = 20;
+const int ARGS_SIZE = 50;
+
 struct employee{
 	int num;
 	char name[10];
 	double hours;
 	};
 
-void printToConsole(char filename[20]){
+void printToConsole(char filename[FILENAME_SIZE]){
 	ifstream in(filename, ios::in|ios::binary|ios::ate);
 	in.seekg(0, ios::end);
 	int n = in.tellg()/sizeof(employee);
@@ -58,7 +61,7 @@ bool writeReport(char filename[], char reportname[], int salary){
 	PROCESS_INFORMATION piApp;
 	ZeroMemory(&si, sizeof(STARTUPINFO));
 	si.cb = sizeof(STARTUPINFO);
-	char args[50] = "Reporter.exe ";
+	char args[ARGS_SIZE] = "Reporter.exe ";
 	char buff[10];
 	strcat(args, filename); strcat(args, " ");
 	strcat(args, reportname); strcat(args, " ");
@@ -77,7 +80,7 @@ int main(int argc, char *argv[]){
 	cout << "number of records\n>";
 	int count; cin >> count;
 	cout << "filename\n>";
-	char filename[20]; cin >> filename;
+	char filename[FILENAME_SIZE]; cin >> filename;
 	if(createBin(count, filename)){
 		cout << "Data file created." << endl;
 		printToConsole(filename);
@@ -86,7 +89,7 @@ int main(int argc, char *argv[]){
 		cout << "Data file was not created." << endl;
 		}
 	cout << "\n\nName of the report file: \n>";
-	char reportname[20];
+	char reportname[FILENAME_SIZE];
 	cin >> reportname;
 	cout << "Salary: \n>";
 	int salary; cin >> salary;

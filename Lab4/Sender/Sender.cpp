@@ -4,7 +4,7 @@
 
 const int MESSAGE_SIZE = 20;
 
-void sendMessage(std::ofstream &out, char message[20], char* filename){
+void sendMessage(std::ofstream &out, char message[MESSAGE_SIZE], char* filename){
 	out.open(filename, std::ios::binary | std::ios::app);
 	out.write(message, MESSAGE_SIZE);
 	out.close();
@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 
 	HANDLE ReadyEvent = OpenEvent(EVENT_MODIFY_STATE, FALSE, eventname);
 	HANDLE StartAll = OpenEvent(SYNCHRONIZE, FALSE, "START_ALL");
-	if (ReadyEvent == NULL || StartAll == NULL) {
+	if (NULL == ReadyEvent || NULL == StartAll) {
 		printf("Open event failed.\n");
 		system("pause");
 		return GetLastError();
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 		sendMessage(out, message, filename);
 		ReleaseMutex(fileMutex);
 		//if message file is full, waits for reciever event
-		if(ReleaseSemaphore(senderSemaphore, 1, NULL) != TRUE){
+		if(TRUE != ReleaseSemaphore(senderSemaphore, 1, NULL)){
 			std::cout << "Message file is full. Waiting for receiver." << std::endl;
 			ResetEvent(mesReadEvent);
 			WaitForSingleObject(mesReadEvent, INFINITE);

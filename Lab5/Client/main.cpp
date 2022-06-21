@@ -6,6 +6,8 @@
 const char pipeName[30] = "\\\\.\\pipe\\pipe_name";
 const int MESSAGE_SIZE = 10;
 
+const int CONNECTION_WAIT_TIME = 5000;
+
 void messaging(HANDLE hPipe){
     std::cout << "\n\nTo quit press Ctrl+Z" << std::endl;
     while(true){
@@ -77,7 +79,7 @@ int main(int argc, char** argv) {
         if (INVALID_HANDLE_VALUE != hPipe) {
             break;
         }
-        if(!WaitNamedPipe(pipeName, 5000)){
+        if(!WaitNamedPipe(pipeName, CONNECTION_WAIT_TIME)){
             std::cout << "5 second wait timed out." << std::endl;
             getch();
             return 0;
